@@ -302,7 +302,7 @@
 
         // Set the left wheel to always point forward (0°)
         document.getElementById('leftWheel').style.transform = 'rotate(0deg)';
-        document.getElementById('rightWheel').style.transform = `rotate(${alpha2}deg)`;
+        document.getElementById('rightWheel').style.transform = `rotate(${diff}deg)`;  // Apply difference to right wheel
 
         document.getElementById('toeLabel').textContent = `Toe Angle: ${toeAngle.toFixed(2)}°`;
         updateToeIcon(toeAngle);
