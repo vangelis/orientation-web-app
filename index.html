@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Z-Axis Orientation Tool</title>
+  <title>Toe Angle Measurement Tool</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body {
@@ -10,11 +10,13 @@
       padding: 2rem;
       text-align: center;
     }
+
     button {
       margin: 1rem 0.5rem;
       padding: 1rem;
       font-size: 1.1rem;
     }
+
     .output {
       margin-top: 2rem;
       font-size: 1.4rem;
@@ -99,15 +101,52 @@
       margin-top: 0.5rem;
       font-weight: bold;
     }
+
+    .car-toe-visual {
+      position: relative;
+      width: 300px;
+      height: 150px;
+      margin: 3rem auto 1rem;
+      background: #f5f5f5;
+      border-radius: 10px;
+      border: 2px solid #ccc;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem;
+    }
+
+    .wheel {
+      width: 50px;
+      height: 80px;
+      background: #333;
+      border-radius: 10px;
+      color: white;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transform-origin: center center;
+      transition: transform 0.3s ease;
+    }
+
+    .toe-angle-label {
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-weight: bold;
+      font-size: 1.2rem;
+    }
   </style>
 </head>
 <body>
 
-  <h1>Z-Axis Orientation Tool</h1>
+  <h1>Toe Angle Measurement Tool</h1>
 
   <button id="startBtn">Request Motion Access (iPhone)</button><br>
-  <button id="capture1">Capture First Orientation</button>
-  <button id="capture2">Capture Second Orientation</button>
+  <button id="capture1">Capture Left Wheel</button>
+  <button id="capture2">Capture Right Wheel</button>
 
   <div class="indicator-wrapper" id="indicator">
     <div class="dot" id="dot"></div>
@@ -127,6 +166,13 @@
       <div class="needle" id="needle"></div>
     </div>
     <div class="alpha-value" id="alphaValue">Alpha: 0°</div>
+  </div>
+
+  <h2>Front Wheel Toe Angle Visualization</h2>
+  <div class="car-toe-visual">
+    <div class="wheel left-wheel" id="leftWheel">L</div>
+    <div class="wheel right-wheel" id="rightWheel">R</div>
+    <div class="toe-angle-label" id="toeLabel">Toe Angle: 0°</div>
   </div>
 
   <div class="output" id="output">Awaiting input...</div>
@@ -207,23 +253,28 @@
 
     document.getElementById('capture1').addEventListener('click', () => {
       alpha1 = window.currentAlpha;
-      document.getElementById('output').textContent = `First orientation captured: ${alpha1?.toFixed(2)}°`;
+      document.getElementById('output').textContent = `Left wheel orientation: ${alpha1?.toFixed(2)}°`;
     });
 
     document.getElementById('capture2').addEventListener('click', () => {
       alpha2 = window.currentAlpha;
       if (alpha1 === null) {
-        document.getElementById('output').textContent = 'Capture the first orientation first.';
+        document.getElementById('output').textContent = 'Capture the left wheel first.';
         return;
       }
 
       if (alpha2 != null) {
-        const diff = Math.abs(alpha2 - alpha1);
-        const minimalDiff = Math.min(diff, 360 - diff);
-        document.getElementById('output').textContent = `Second orientation: ${alpha2.toFixed(2)}°. Z-axis difference: ${minimalDiff.toFixed(2)}°`;
+        const diff = alpha2 - alpha1;
+        const toeAngle = ((diff + 540) % 360) - 180; // Normalize to [-180, 180]
+
+        // Update visual wheels
+        document.getElementById('leftWheel').style.transform = `rotate(${alpha1}deg)`;
+        document.getElementById('rightWheel').style.transform = `rotate(${alpha2}deg)`;
+
+        document.getElementById('toeLabel').textContent = `Toe Angle: ${toeAngle.toFixed(2)}°`;
+        document.getElementById('output').textContent = `Left: ${alpha1.toFixed(2)}°, Right: ${alpha2.toFixed(2)}°, Toe: ${toeAngle.toFixed(2)}°`;
       }
     });
   </script>
-
 </body>
 </html>
