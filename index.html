@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Z-Axis Orientation Difference</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: sans-serif; padding: 2rem; }
+    button { margin: 1rem 0; padding: 1rem; font-size: 1.2rem; }
+    .output { margin-top: 2rem; font-size: 1.5rem; }
+
+    .indicator-wrapper {
+      margin-top: 2rem;
+      width: 200px;
+      height: 200px;
+      border: 3px solid #ccc;
+      border-radius: 50%;
+      position: relative;
+      background: #f9f9f9;
+    }
+
+    .dot {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: red;
+      transition: background 0.2s;
+    }
+
+    .dot.flat {
+      background: green;
+    }
+  </style>
+</head>
+<body>
+  <h1>Z-Axis Orientation Difference</h1>
+
+  <button id="startBtn">Request Motion Access (iPhone)</button><br>
+  <button id="capture1">Capture First Orientation</button>
+  <button id="capture2">Capture Second Orientation</button>
+
+  <div class="indicator-wrapper">
+    <div class="dot" id="dot"></div>
+  </div>
+
+  <div class="output" id="output">Awaiting input...</div>
+
+  <script>
+    let alpha1 = null;
+    let alpha2 = null;
+    let dot = document.getElementById('dot');
+
+    // Request permission for iOS
+    document.getElementById('startBtn').addEventListener('click', async () => {
+      if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+        try {
+          const response = await DeviceOrientationEvent.requestPermission();
+          if (response === 'granted') {
+            document.getElementById('output').textContent = 'Permission granted. Ready to capture orientation.';
+          } else {
+            document.getElementById('output').textContent = 'Permission denied.';
+          }
+        } catch (e) {
+          document.getElementById('output').textContent = 'Error requesting permission.';
+        }
+      } else {
+        document.getElementById('output').textContent = 'Permission not required on this device.';
+      }
+    });
+
+    window.addEventListener('deviceorientation', (event) => {
+      const { alpha, beta, gamma } = event;
+
+      // Save alpha globally
+      window.currentAlpha = alpha;
+
+      // Update indicator
+      const maxTilt = 45; // degrees
+      const x = Math.max(Math.min(gamma, maxTilt), -maxTilt);
+      const y = Math.max(Math.min(beta, maxTilt), -maxTilt);
+
+      const wrapper = document.querySelector('.indicator-wrapper');
+      const size = wrapper.offsetWidth;
+      const center = size / 2;
+      const scale = center / maxTilt;
+
+      const dx = x * scale;
+      const dy = y * scale;
+
+      dot.style.transform = `translate(${dx - 10}px, ${dy - 10}px)`;
+
+      const flatThreshold = 5;
+      if (Math.abs(beta) < flatThreshold && Math.abs(gamma) < flatThreshold) {
+        dot.classList.add('flat');
+      } else {
+        dot.classList.remove('flat');
+      }
+    });
+
+    document.getElementById('capture1').addEventListener('click', () => {
+      alpha1 = window.currentAlpha;
+      document.getElementById('output').textContent = `First orientation captured: ${alpha1?.toFixed(2)}°`;
+    });
+
+    document.getElementById('capture2').addEventListener('click', () => {
+      alpha2 = window.currentAlpha;
+      if (alpha1 === null) {
+        document.getElementById('output').textContent = 'Capture the first orientation first.';
+        return;
+      }
+
+      if (alpha2 != null) {
+        const diff = Math.abs(alpha2 - alpha1);
+        const minimalDiff = Math.min(diff, 360 - diff); // Shortest angle distance
+        document.getElementById('output').textContent = `Second orientation: ${alpha2.toFixed(2)}°. Z-axis difference: ${minimalDiff.toFixed(2)}°`;
+      }
+    });
+  </script>
+</body>
+</html>
