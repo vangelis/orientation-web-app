@@ -300,12 +300,13 @@
         const diff = alpha2 - alpha1;
         const toeAngle = ((diff + 540) % 360) - 180;
 
-        document.getElementById('leftWheel').style.transform = `rotate(${alpha1}deg)`;
+        // Set the left wheel to always point forward (0°)
+        document.getElementById('leftWheel').style.transform = 'rotate(0deg)';
         document.getElementById('rightWheel').style.transform = `rotate(${alpha2}deg)`;
 
         document.getElementById('toeLabel').textContent = `Toe Angle: ${toeAngle.toFixed(2)}°`;
         updateToeIcon(toeAngle);
-        document.getElementById('output').textContent = `Left: ${alpha1.toFixed(2)}°, Right: ${alpha2.toFixed(2)}°, Toe: ${toeAngle.toFixed(2)}°`;
+        document.getElementById('output').textContent = `Left: 0°, Right: ${alpha2.toFixed(2)}°, Toe: ${toeAngle.toFixed(2)}°`;
 
         // Prompt user to recapture left wheel for accuracy
         document.getElementById('output').textContent += ' Please capture left wheel again to improve accuracy.';
