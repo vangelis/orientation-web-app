@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Toe Angle Measurement Tool</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
@@ -12,14 +12,14 @@
     }
 
     button {
-      margin: 1rem 0.5rem;
+      margin: 0.5rem;
       padding: 1rem;
       font-size: 1.1rem;
     }
 
     .output {
       margin-top: 2rem;
-      font-size: 1.4rem;
+      font-size: 1.3rem;
     }
 
     .indicator-wrapper {
@@ -138,15 +138,21 @@
       font-weight: bold;
       font-size: 1.2rem;
     }
+
+    .toe-icon {
+      font-size: 2rem;
+      margin-top: 1rem;
+    }
   </style>
 </head>
 <body>
 
   <h1>Toe Angle Measurement Tool</h1>
 
-  <button id="startBtn">Request Motion Access (iPhone)</button><br>
+  <button id="startBtn">Request Motion Access</button><br>
   <button id="capture1">Capture Left Wheel</button>
   <button id="capture2">Capture Right Wheel</button>
+  <button id="resetBtn">Reset Readings</button>
 
   <div class="indicator-wrapper" id="indicator">
     <div class="dot" id="dot"></div>
@@ -174,6 +180,7 @@
     <div class="wheel right-wheel" id="rightWheel">R</div>
     <div class="toe-angle-label" id="toeLabel">Toe Angle: 0°</div>
   </div>
+  <div class="toe-icon" id="toeIcon">🚗</div>
 
   <div class="output" id="output">Awaiting input...</div>
 
@@ -181,6 +188,7 @@
     let alpha1 = null;
     let alpha2 = null;
     let lastFlatState = false;
+    let lastAlpha = null;  // Store last alpha value
 
     const dot = document.getElementById('dot');
     const tiltValue = document.getElementById('tiltValue');
@@ -195,20 +203,49 @@
       }
     }
 
+    function updateToeIcon(angle) {
+      const icon = document.getElementById('toeIcon');
+      if (angle > 1) icon.textContent = '👉 👈 Toe-Out';
+      else if (angle < -1) icon.textContent = '👈 👉 Toe-In';
+      else icon.textContent = '🚗 Neutral';
+    }
+
+    function smoothRotate(angle) {
+      if (lastAlpha !== null) {
+        let delta = angle - lastAlpha;
+        
+        // Handle the smooth rotation transition
+        if (Math.abs(delta) > 180) {
+          if (delta > 0) {
+            delta -= 360;
+          } else {
+            delta += 360;
+          }
+        }
+
+        const smoothAngle = lastAlpha + delta;
+        needle.style.transform = `rotate(${smoothAngle}deg)`;
+      } else {
+        needle.style.transform = `rotate(${angle}deg)`;
+      }
+
+      lastAlpha = angle; // Store the current alpha for the next frame
+    }
+
     document.getElementById('startBtn').addEventListener('click', async () => {
       if (typeof DeviceOrientationEvent.requestPermission === 'function') {
         try {
           const response = await DeviceOrientationEvent.requestPermission();
           if (response === 'granted') {
-            document.getElementById('output').textContent = 'Permission granted. Ready to capture orientation.';
+            document.getElementById('output').textContent = 'Permission granted. Ready.';
           } else {
             document.getElementById('output').textContent = 'Permission denied.';
           }
-        } catch (e) {
+        } catch {
           document.getElementById('output').textContent = 'Error requesting permission.';
         }
       } else {
-        document.getElementById('output').textContent = 'Permission not required on this device.';
+        document.getElementById('output').textContent = 'Permission not required.';
       }
     });
 
@@ -216,23 +253,19 @@
       const { alpha, beta, gamma } = event;
       window.currentAlpha = alpha;
 
-      // Tilt distance
       const tiltDistance = Math.sqrt(beta * beta + gamma * gamma);
       tiltValue.textContent = `Tilt Distance: ${tiltDistance.toFixed(1)}°`;
 
-      // Gauge
       const maxTilt = 45;
       const percent = Math.min(100, (tiltDistance / maxTilt) * 100);
       gaugeFill.style.width = `${percent}%`;
 
-      // Dot position
       const x = Math.max(Math.min(gamma, maxTilt), -maxTilt);
       const y = Math.max(Math.min(beta, maxTilt), -maxTilt);
       const scale = (indicatorSize / 2 - 10) / maxTilt;
       dot.style.left = `${100 + x * scale - 10}px`;
       dot.style.top = `${100 + y * scale - 10}px`;
 
-      // Flat detection + haptic
       const flatThreshold = 5;
       const isFlat = Math.abs(beta) < flatThreshold && Math.abs(gamma) < flatThreshold;
       if (isFlat) {
@@ -246,34 +279,47 @@
         lastFlatState = false;
       }
 
-      // Alpha compass
       alphaValue.textContent = `Alpha: ${alpha.toFixed(1)}°`;
-      needle.style.transform = `rotate(${alpha}deg)`;
+
+      smoothRotate(alpha); // Use the smooth rotation function
     });
 
     document.getElementById('capture1').addEventListener('click', () => {
       alpha1 = window.currentAlpha;
-      document.getElementById('output').textContent = `Left wheel orientation: ${alpha1?.toFixed(2)}°`;
+      document.getElementById('output').textContent = `Left wheel captured at ${alpha1?.toFixed(2)}°`;
     });
 
     document.getElementById('capture2').addEventListener('click', () => {
       alpha2 = window.currentAlpha;
       if (alpha1 === null) {
-        document.getElementById('output').textContent = 'Capture the left wheel first.';
+        document.getElementById('output').textContent = 'Please capture the left wheel first.';
         return;
       }
 
       if (alpha2 != null) {
         const diff = alpha2 - alpha1;
-        const toeAngle = ((diff + 540) % 360) - 180; // Normalize to [-180, 180]
+        const toeAngle = ((diff + 540) % 360) - 180;
 
-        // Update visual wheels
         document.getElementById('leftWheel').style.transform = `rotate(${alpha1}deg)`;
         document.getElementById('rightWheel').style.transform = `rotate(${alpha2}deg)`;
 
         document.getElementById('toeLabel').textContent = `Toe Angle: ${toeAngle.toFixed(2)}°`;
+        updateToeIcon(toeAngle);
         document.getElementById('output').textContent = `Left: ${alpha1.toFixed(2)}°, Right: ${alpha2.toFixed(2)}°, Toe: ${toeAngle.toFixed(2)}°`;
+
+        // Prompt user to recapture left wheel for accuracy
+        document.getElementById('output').textContent += ' Please capture left wheel again to improve accuracy.';
       }
+    });
+
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      alpha1 = null;
+      alpha2 = null;
+      document.getElementById('output').textContent = 'Readings cleared.';
+      document.getElementById('toeLabel').textContent = 'Toe Angle: 0°';
+      document.getElementById('toeIcon').textContent = '🚗';
+      document.getElementById('leftWheel').style.transform = 'rotate(0deg)';
+      document.getElementById('rightWheel').style.transform = 'rotate(0deg)';
     });
   </script>
 </body>
